@@ -237,6 +237,7 @@
 		<!-- Activities from OI Distribution Library -->
         <activity android:name="org.openintents.distribution.EulaActivity" />
         <activity android:name="org.openintents.distribution.NewVersionActivity" />
+        <activity android:name="org.openintents.cloudsync.SyncActivity"></activity>
 	</application>
 
 	<uses-permission android:name="org.openintents.notepad.READ_PERMISSION" />

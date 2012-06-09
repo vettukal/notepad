@@ -227,4 +227,5 @@
 	<string name="confirm_delete">Are you sure you want to delete this note?</string>
 	
 	<string name="new_note">New note</string>
+	<string name="prepare_sync">Preparing for Sync</string>
 </resources>
