@@ -38,6 +38,7 @@ public class AsyncApplyResult extends AsyncTask<String, Void, String>{
 	@Override
 	protected String doInBackground(String... params) {
 		
+		Log.v(TAG, "do in back of apply result");
 		String jsonData = params[0];
 		try {
 			JSONObject jsonMainObj = new JSONObject(jsonData);
@@ -63,13 +64,24 @@ public class AsyncApplyResult extends AsyncTask<String, Void, String>{
 					notes = Uri.withAppendedPath(notes, String.valueOf(localId));
 					
 					ContentValues values = new ContentValues();
-					values.put(Notes.TITLE, noteobj.getString("title"));
-					values.put(Notes.NOTE, noteobj.getString("note"));
-					values.put(Notes.CREATED_DATE, Long.parseLong( noteobj.getString("created_date")) );
-					values.put(Notes.MODIFIED_DATE, Long.parseLong(noteobj.getString("modified_date")));
-					values.put(Notes.TAGS, noteobj.getString("tags"));
-					values.put(Notes.ENCRYPTED, noteobj.getLong("encrypted"));
-					values.put(Notes.THEME, noteobj.getString("theme"));
+					values.put(Notes.TITLE, noteobj.getString("title").trim());
+					values.put(Notes.NOTE, noteobj.getString("note").trim());
+					values.put(Notes.CREATED_DATE, noteobj.getLong("created_date") );
+					values.put(Notes.MODIFIED_DATE, noteobj.getLong("modified_date"));
+					
+					if(!(noteobj.getString("tags").trim().equals("null"))) {
+						values.put(Notes.TAGS, noteobj.getString("tags"));
+					}
+					
+					if(!(noteobj.getString("encrypted").trim().equals("null"))) {
+						values.put(Notes.ENCRYPTED, noteobj.getLong("encrypted"));
+					}
+					
+					if(!(noteobj.getString("theme").trim().equals("null"))) {
+						values.put(Notes.THEME, noteobj.getString("theme"));
+					}
+					
+					
 					values.put(Notes.SELECTION_START, noteobj.getLong("selection_start"));
 					values.put(Notes.SELECTION_END, noteobj.getLong("selection_end"));
 					values.put(Notes.SCROLL_POSITION, noteobj.getDouble("scroll_position"));
@@ -80,7 +92,7 @@ public class AsyncApplyResult extends AsyncTask<String, Void, String>{
 				}
 			}
 		} catch (JSONException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
 		
@@ -88,7 +100,7 @@ public class AsyncApplyResult extends AsyncTask<String, Void, String>{
 	}
 
 	private void insertNote(JSONObject jobj) {
-		// TODO Auto-generated method stub
+		
 		
 		try {
 			//long localId = jobj.getLong("id"); // just for checking del this
@@ -96,20 +108,30 @@ public class AsyncApplyResult extends AsyncTask<String, Void, String>{
 			JSONObject noteobj = jobj.getJSONObject("jsonString");
 			
 			ContentValues values = new ContentValues();
-			values.put(Notes.TITLE, noteobj.getString("title"));
-			values.put(Notes.NOTE, noteobj.getString("note"));
-			values.put(Notes.CREATED_DATE, Long.parseLong( noteobj.getString("created_date")) );
-			values.put(Notes.MODIFIED_DATE, Long.parseLong(noteobj.getString("modified_date")));
-			values.put(Notes.TAGS, noteobj.getString("tags"));
-			values.put(Notes.ENCRYPTED, noteobj.getLong("encrypted"));
-			values.put(Notes.THEME, noteobj.getString("theme"));
+			values.put(Notes.TITLE, noteobj.getString("title").trim());
+			values.put(Notes.NOTE, noteobj.getString("note").trim());
+			values.put(Notes.CREATED_DATE, noteobj.getLong("created_date") );
+			values.put(Notes.MODIFIED_DATE, noteobj.getLong("modified_date"));
+			
+			if(!(noteobj.getString("tags").trim().equals("null"))) {
+				values.put(Notes.TAGS, noteobj.getString("tags"));
+			}
+			
+			if(!(noteobj.getString("encrypted").trim().equals("null"))) {
+				values.put(Notes.ENCRYPTED, noteobj.getLong("encrypted"));
+			}
+			
+			if(!(noteobj.getString("theme").trim().equals("null"))) {
+				values.put(Notes.THEME, noteobj.getString("theme"));
+			}
+			
 			values.put(Notes.SELECTION_START, noteobj.getLong("selection_start"));
 			values.put(Notes.SELECTION_END, noteobj.getLong("selection_end"));
 			values.put(Notes.SCROLL_POSITION, noteobj.getDouble("scroll_position"));
 			
 			Uri notesUri = Uri.parse(NotePad.Notes.CONTENT_URI.toString());
 			Uri insertUri = activity.getContentResolver().insert(notesUri, values);
-			
+			Log.v(TAG, "inserted into the notepad: "+insertUri);
 			// Now insert the new got Id form insertUri into idMapTable
 			String IDMAP_AUTHORITY = "org.openintents.idmap.contentprovider";
 			
@@ -126,10 +148,19 @@ public class AsyncApplyResult extends AsyncTask<String, Void, String>{
 			activity.getContentResolver().insert(IDMAP_CONTENT_URI, idmapValues);
 			
 		} catch (JSONException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
 		
 	}
+
+	@Override
+	protected void onPostExecute(String result) {
+		
+		activity.syncComplete();
+		super.onPostExecute(result);
+	}
+	
+	
 
 }

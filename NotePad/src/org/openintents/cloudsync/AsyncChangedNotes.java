@@ -66,31 +66,33 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 		
 		long[][] modMatrix = getmodMatrix(modCursor);
 		
+		/**
 		if(modMatrix.length==0) {
 			Log.d(TAG, "modMatrix lenght returned is 0");
 			modCursor.close();
 			addAllNotesToModTable();
 		} else {
+		*/
 			Log.d(TAG, "lenght of the modMatrix is:-> "+modMatrix.length);
 			
 			Uri notesUri = Uri.parse(NotePad.Notes.CONTENT_URI.toString());
 			Cursor cursor = activity.getContentResolver().query(notesUri, PROJECTIONALL, null, null, null);
 			cursor.moveToFirst();
-			int totRows = cursor.getCount();
-			for(int i=0;i<totRows;i++) {
+			int totRowsn = cursor.getCount();
+			for(int i=0;i<totRowsn;i++) {
 				Log.d(TAG, "going into checkAndAdd with note:-> "+cursor.getString(1));
 				checkAndAdd(cursor,modMatrix);
 				cursor.moveToNext();
 			}
 			// maybe cursor can be close
-		}
+		//} else
 		// testing the results..
 		modCursor.close();
 		modCursor = activity.getContentResolver().query(modUri, null, null, null, null);
 		int totRows = modCursor.getCount();
 		modCursor.moveToFirst();
 		for(int i=0;i<totRows;i++) {
-			Log.d(TAG, "TEsting the last"+modCursor.getString(0)+" "+modCursor.getString(1));
+			Log.d(TAG, "TEsting the last: "+modCursor.getString(0)+" "+modCursor.getString(1));
 			modCursor.moveToNext();
 		}
 		//jsonbuilder.length() - 1 is needed to eliminate the last comma in the building process
@@ -156,7 +158,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 	}
 
 	private void addToJson(Cursor cursor) {
-		// TODO Auto-generated method stub
+		
 		// this methods makes the json string by adding the notes to one json string
 		
         String id=cursor.getString(0);
@@ -213,7 +215,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 
 	private long[][] getmodMatrix(Cursor modCursor) {
 		
-		// 
+		
 		//TODO only the elements with same package must be in the long
 		if(modCursor==null | modCursor.getCount()==0) {
 			Log.d(TAG, "it is null");
