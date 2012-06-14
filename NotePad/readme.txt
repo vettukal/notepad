@@ -164,3 +164,6 @@ Difference from the original Android SDK version:
 - Fixed bug in connection with orientation change.
 - Automatically pick title from first line of note.
   Drop title editor.
+
+  give me a conflict i want a conflict OI Notepad system for checking diffs
+
