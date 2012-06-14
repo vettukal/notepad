@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 
+import org.openintents.cloudsync.SyncActivity;
 import org.openintents.distribution.DistributionLibraryListActivity;
 import org.openintents.distribution.DownloadOIAppDialog;
 import org.openintents.intents.CryptoIntents;
@@ -107,6 +108,9 @@ public class NotesList extends DistributionLibraryListActivity implements
 	private static final int MENU_OPEN = Menu.FIRST + 9;
 	private static final int MENU_SETTINGS = Menu.FIRST + 10;
 	private static final int MENU_SEARCH = Menu.FIRST + 11;
+
+	private static final int MENU_SYNC = Menu.FIRST + 12;
+
 	private static final int MENU_DISTRIBUTION_START = Menu.FIRST + 100; // MUST
 																			// BE
 																			// LAST
@@ -507,6 +511,11 @@ public class NotesList extends DistributionLibraryListActivity implements
 				.setIcon(android.R.drawable.ic_menu_preferences)
 				.setShortcut('9', 's');
 
+		
+		menu.add(0,MENU_SYNC,0,"SYNC")
+		        .setIcon(android.R.drawable.ic_menu_send);
+
+
 		// Add distribution menu items last.
 		mDistribution.onCreateOptionsMenu(menu);
 
@@ -590,9 +599,21 @@ public class NotesList extends DistributionLibraryListActivity implements
 		case MENU_SETTINGS:
 			showNotesListSettings();
 			return true;
+
+		case MENU_SYNC:
+            syncdata();
+            return true;
+
 		}
 		return super.onOptionsItemSelected(item);
 	}
+	
+	private void syncdata() {
+		Intent i = new Intent(this, SyncActivity.class);
+		startActivity(i);
+	}
+        
+		
 
 	/**
 	 * Launch activity to insert a new item.
