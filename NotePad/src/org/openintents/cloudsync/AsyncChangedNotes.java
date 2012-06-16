@@ -88,6 +88,8 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 		//} else
 		// testing the results..
 		modCursor.close();
+		// /**
+		// * This code was only for testing purposes
 		modCursor = activity.getContentResolver().query(modUri, null, null, null, null);
 		int totRows = modCursor.getCount();
 		modCursor.moveToFirst();
@@ -95,6 +97,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 			Log.d(TAG, "TEsting the last: "+modCursor.getString(0)+" "+modCursor.getString(1));
 			modCursor.moveToNext();
 		}
+		// */
 		//jsonbuilder.length() - 1 is needed to eliminate the last comma in the building process
 		String jsonBuilderString = "";
 		if(jsonBuilder.length()>1) {
@@ -102,12 +105,16 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 		}
 		String jsonData = "{ \"data\" : [" + jsonBuilderString + "] }";
 		Log.d(TAG, jsonData);
+		/**
+		 * only for testing purpose
+		 
 		try {
 		    JSONObject mainJobj = new JSONObject(jsonData);
 			JSONArray jarray = mainJobj.getJSONArray("data");
 		} catch (JSONException e) {
 			Log.d(TAG, "exception in main json arra",e);
 		}
+		*/
 		String[][] retJson = new String[1][1];
 		retJson[0][0] = jsonData;
 
@@ -132,12 +139,17 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 					break;
 				}
 				else {
+					// here modMatrix local id == _id of notes but mod date is not same
+					// this means this note has been modified.
 					ContentValues values = new ContentValues();
 					values.put("localid", localId);
 					values.put("moddate", localModDate);
 					values.put("pckname", activity.getPackageName());
-					modUri = Uri.withAppendedPath(modUri, Long.toString(modMatrix[i][0])); // this is going to update _id[0] with values of the present sync
-					int returnVal = activity.getContentResolver().update(modUri, values, null, null);// return val is 1 if success.
+					// [i][0] is the value of _id of modTable. 
+					// this assumes that sync will be completed succesfully every time
+					// instead you could "update" this to modTable at the last of sync process
+					Uri modUriAppend = Uri.withAppendedPath(modUri, Long.toString(modMatrix[i][0])); // this is going to update _id[0] with values of the present sync
+					int returnVal = activity.getContentResolver().update(modUriAppend, values, null, null);// return val is 1 if success.
 					Log.d(TAG, "modifying the value with _id:-> "+modMatrix[i][0]+" localId:-> "+localId+" result:-> "+returnVal);
 					addToJson(cursor);
 					break;
@@ -173,6 +185,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 		String selection_end=cursor.getString(9);
 		String scroll_position=cursor.getString(10);
 		
+		// even numbers are put in string. change that.
 		String jsonNoteString= " { \"id\": \" "+id+" \" , \"jsonString\": { \"title\": \" "+title+" \", \"note\": \" "+note+" \", \"created_date\": \" "+created_date+" \", \"modified_date\": \" "+modified_date+" \", \"tags\": \" "+tags+" \", \"encrypted\": \" "+encrypted+" \", \"theme\": \" "+theme+" \", \"selection_start\": \" "+selection_start+" \", \"selection_end\": \" "+selection_end+" \",\"scroll_position\": \" "+scroll_position+" \" } }  ";
 		Log.d(TAG, jsonNoteString);
 		jsonBuilder.append(jsonNoteString);
@@ -222,7 +235,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 			return new long[0][3];
 		}
 		modCursor.moveToFirst();
-		Log.d(TAG, "lenght returned is:-> "+modCursor.getCount());// test all the elemets..
+		Log.d(TAG, "lenght returned is:-> "+modCursor.getCount());// test all the elements..
 		//Log.d(TAG, "some elements of first element:-> "+modCursor.getString(0)+" "+modCursor.getString(1)+" "+modCursor.getString(2)+" ");
 		long[][] modMatrix = new long[modCursor.getCount()][3];
 		int totRows = modCursor.getCount();

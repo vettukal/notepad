@@ -16,8 +16,8 @@ public class SyncActivity extends Activity{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.sync_layout);
 		
-		TextView syncText = (TextView) findViewById(R.id.sync_textview);
-		
+		// it would be better if this activity is called by the NotesList for result.
+		// right now there is no prob.
 		AsyncChangedNotes asn = new AsyncChangedNotes(this);
 		asn.execute();
 		
