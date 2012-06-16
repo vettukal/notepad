@@ -56,6 +56,8 @@ import org.openintents.util.MenuIntentOptionsWithIcons;
 
 import android.app.Dialog;
 import android.content.DialogInterface.OnDismissListener;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -512,8 +514,8 @@ public class NotesList extends DistributionLibraryListActivity implements
 				.setShortcut('9', 's');
 
 		
-		menu.add(0,MENU_SYNC,0,"SYNC")
-		        .setIcon(android.R.drawable.ic_menu_send);
+		menu.add(0,MENU_SYNC,0,"Sync")
+		        .setIcon(android.R.drawable.ic_menu_send).setEnabled(isSyncAvailable(this));
 
 
 		// Add distribution menu items last.
@@ -1247,4 +1249,17 @@ public class NotesList extends DistributionLibraryListActivity implements
 	 * 
 	 * return true; } return false; }
 	 */
+	
+	public static boolean isSyncAvailable(Context context) {
+		String action = "vincent.start";
+        final PackageManager packageManager = context.getPackageManager();
+        final Intent intent = new Intent(action);
+        List<ResolveInfo> resolveInfo =
+                packageManager.queryIntentActivities(intent,
+                        PackageManager.MATCH_DEFAULT_ONLY);
+       if (resolveInfo.size() > 0) {
+                    return true;
+            }
+       return false;
+    }
 }
