@@ -16,6 +16,7 @@ import android.util.Log;
 public class AsyncApplyResult extends AsyncTask<String, Void, String>{
 	static String tag = "vincent";
 	static String TAG = "AsyncApplyResult";
+	private static final boolean debug = true;
 	SyncActivity activity;
 	static String[] PROJECTIONALL = new String[] {
         NotePad.Notes._ID, // 0
@@ -38,7 +39,7 @@ public class AsyncApplyResult extends AsyncTask<String, Void, String>{
 	@Override
 	protected String doInBackground(String... params) {
 		
-		Log.v(TAG, "do in back of apply result");
+		if (debug) Log.v(TAG, "do in back of apply result");
 		String jsonData = params[0];
 		try {
 			JSONObject jsonMainObj = new JSONObject(jsonData);
@@ -87,7 +88,7 @@ public class AsyncApplyResult extends AsyncTask<String, Void, String>{
 					values.put(Notes.SCROLL_POSITION, noteobj.getDouble("scroll_position"));
 					
 					int returnInt = activity.getContentResolver().update(notes, values, null, null);
-					Log.d(TAG, "after updating "+noteobj.getString("title")+" return values is: "+returnInt);
+					if (debug) Log.d(TAG, "after updating "+noteobj.getString("title")+" return values is: "+returnInt);
 					
 				}
 			}
@@ -131,7 +132,7 @@ public class AsyncApplyResult extends AsyncTask<String, Void, String>{
 			
 			Uri notesUri = Uri.parse(NotePad.Notes.CONTENT_URI.toString());
 			Uri insertUri = activity.getContentResolver().insert(notesUri, values);
-			Log.v(TAG, "inserted into the notepad: "+insertUri);
+			if (debug) Log.v(TAG, "inserted into the notepad: "+insertUri);
 			// Now insert the new got Id form insertUri into idMapTable
 			String IDMAP_AUTHORITY = "org.openintents.idmap.contentprovider";
 			

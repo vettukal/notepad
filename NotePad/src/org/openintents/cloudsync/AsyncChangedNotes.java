@@ -17,8 +17,9 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 	private static StringBuilder jsonDeleteBuilder = new StringBuilder();
 	private static final boolean debug = true;
 	SyncActivity activity;
-	static String tag = "vincent";
+	//static String tag = "vincent";
 	static String TAG = "AsyncChangedNotes";
+	
 	static String[] PROJECTIONALL = new String[] {
         NotePad.Notes._ID, // 0
         NotePad.Notes.TITLE, // 1
@@ -39,7 +40,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 	@Override
 	protected String[] doInBackground(Void... params) {
 		
-		Log.d(tag, "inside the async Change notes");
+		if (debug) Log.d(TAG, "inside the async Change notes");
 		jsonBuilder = new StringBuilder(); // needed so that previous results are not saved in builder.
 		jsonDeleteBuilder = new StringBuilder();
 		
@@ -47,12 +48,12 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 		String MOD_BASE_PATH = "modifys";
 		
         Uri modUri = Uri.parse("content://" + MOD_AUTHORITY + "/" + MOD_BASE_PATH);
-        Log.d(TAG, "uri is:-> "+modUri.toString());//del this
+        if (debug) Log.d(TAG, "uri is:-> "+modUri.toString());//del this
 		Cursor modCursor = activity.getContentResolver().query(modUri, null, null, null, null);
 		
 		long[][] modMatrix = getmodMatrix(modCursor);
 
-		Log.d(TAG, "lenght of the modMatrix is:-> " + modMatrix.length);
+		if (debug) Log.d(TAG, "lenght of the modMatrix is:-> " + modMatrix.length);
 
 		Uri notesUri = Uri.parse(NotePad.Notes.CONTENT_URI.toString());
 		Cursor cursor = activity.getContentResolver().query(notesUri,
@@ -60,7 +61,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 		cursor.moveToFirst();
 		int totRowsn = cursor.getCount();
 		for (int i = 0; i < totRowsn; i++) {
-			Log.d(TAG,
+			if (debug) Log.d(TAG,
 					"going into checkAndAdd with note:-> "
 							+ cursor.getString(1));
 			checkAndAdd(cursor, modMatrix);
@@ -74,7 +75,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 		int totRows = modCursor.getCount();
 		modCursor.moveToFirst();
 		for(int i=0;i<totRows;i++) {
-			Log.d(TAG, "TEsting the last: "+modCursor.getString(0)+" "+modCursor.getString(1));
+			if (debug) Log.d(TAG, "TEsting the last: "+modCursor.getString(0)+" "+modCursor.getString(1));
 			modCursor.moveToNext();
 		}
 		
@@ -84,12 +85,12 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 			jsonBuilderString = jsonBuilder.substring(0, jsonBuilder.length()-1);
 		}
 		String jsonData = "{ \"data\" : [" + jsonBuilderString + "] }";
-		Log.d(TAG, jsonData);
+		if (debug) Log.d(TAG, jsonData);
 		try {
 		    JSONObject mainJobj = new JSONObject(jsonData);
 			JSONArray jarray = mainJobj.getJSONArray("data");
 		} catch (JSONException e) {
-			Log.d(TAG, "exception in main json array",e);
+			if (debug) Log.d(TAG, "exception in main json array",e);
 		}
 		String[] retJson = new String[2];
 		retJson[0] = jsonData;
@@ -102,7 +103,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 		}
 		String jsonDeleteData = "{ \"data\" : [" + jsonDeleteBuilderString + "] }";
 		retJson[1] = jsonDeleteData;
-		if (debug) Log.i(TAG,"jsonDeleteData "+jsonDeleteData);
+		if (debug) if (debug) Log.i(TAG,"jsonDeleteData "+jsonDeleteData);
 
 		return retJson;
 	}
@@ -143,14 +144,14 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 	private void addToJsonDel(long id) {
 		// TODO Auto-generated method stub
 		String jsonNoteString= " { \"id\":"+id+"}";
-		if (debug) Log.i(TAG,"jsonDelString"+jsonNoteString);
+		if (debug) if (debug) Log.i(TAG,"jsonDelString"+jsonNoteString);
 		
 		jsonDeleteBuilder.append(jsonNoteString);
 		jsonDeleteBuilder.append(",");
 		
 		if (debug)
 			try {
-				Log.i(TAG,"checkJnote"+new JSONObject(jsonNoteString).getLong("id"));
+				if (debug) Log.i(TAG,"checkJnote"+new JSONObject(jsonNoteString).getLong("id"));
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				
@@ -174,7 +175,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 				if(localModDate==modMatrix[i][2]) {
 					//do nothing this means the modification has not been done to this note
 					// coz id and modDate are same compared to the previous sync data.
-					Log.d(TAG, "do nothing for:-> "+cursor.getString(1));
+					if (debug) Log.d(TAG, "do nothing for:-> "+cursor.getString(1));
 					break;
 				}
 				else {
@@ -184,7 +185,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 					values.put("pckname", activity.getPackageName());
 					modUri = Uri.withAppendedPath(modUri, Long.toString(modMatrix[i][0])); // this is going to update _id[0] with values of the present sync
 					int returnVal = activity.getContentResolver().update(modUri, values, null, null);// return val is 1 if success.
-					Log.d(TAG, "modifying the value with _id:-> "+modMatrix[i][0]+" localId:-> "+localId+" result:-> "+returnVal);
+					if (debug) Log.d(TAG, "modifying the value with _id:-> "+modMatrix[i][0]+" localId:-> "+localId+" result:-> "+returnVal);
 					addToJson(cursor);
 					break;
 				}
@@ -196,7 +197,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 			values.put("moddate", localModDate);
 			values.put("pckname", activity.getPackageName());
 			Uri insertUri = activity.getContentResolver().insert(modUri, values);
-			Log.d(TAG, "inserting the new value localId:-> "+localId+" retUri is:-> "+insertUri.toString());
+			if (debug) Log.d(TAG, "inserting the new value localId:-> "+localId+" retUri is:-> "+insertUri.toString());
 			addToJson(cursor);
 		}
 		// Do NOT close cursor
@@ -220,20 +221,20 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 		String scroll_position=cursor.getString(10);
 		
 		String jsonNoteString= " { \"id\": \" "+id+" \" , \"jsonString\": { \"title\": \" "+title+" \", \"note\": \" "+note+" \", \"created_date\": \" "+created_date+" \", \"modified_date\": \" "+modified_date+" \", \"tags\": \" "+tags+" \", \"encrypted\": \" "+encrypted+" \", \"theme\": \" "+theme+" \", \"selection_start\": \" "+selection_start+" \", \"selection_end\": \" "+selection_end+" \",\"scroll_position\": \" "+scroll_position+" \" } }  ";
-		Log.d(TAG, jsonNoteString);
+		if (debug) Log.d(TAG, jsonNoteString);
 		jsonBuilder.append(jsonNoteString);
 		jsonBuilder.append(",");
 		try {
 			JSONObject jNoteObject = new JSONObject(jsonNoteString);
 		       
-		       Log.d(TAG,"id is:-> "+jNoteObject.getString("id"));
+		       if (debug) Log.d(TAG,"id is:-> "+jNoteObject.getString("id"));
 		       JSONObject jsonStringObj = jNoteObject.getJSONObject("jsonString");
-		       Log.d(TAG,"note head is:-> "+jsonStringObj.getString("title"));
-		       Log.d(TAG,"note main body:-> "+jsonStringObj.getString("note"));
-		       Log.d(TAG,"note select start:-> "+jsonStringObj.getString("selection_start"));
+		       if (debug) Log.d(TAG,"note head is:-> "+jsonStringObj.getString("title"));
+		       if (debug) Log.d(TAG,"note main body:-> "+jsonStringObj.getString("note"));
+		       if (debug) Log.d(TAG,"note select start:-> "+jsonStringObj.getString("selection_start"));
 		} 
 		catch (JSONException e) {
-			Log.d(TAG, "json exception occured",e);
+			if (debug) Log.d(TAG, "json exception occured",e);
 		}
 		
 	}
@@ -252,8 +253,8 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 //			values.put("moddate", cursor.getString(4));
 //			values.put("pckname", activity.getPackageName());
 //			Uri insertUri = activity.getContentResolver().insert(modUri, values);
-//			Log.d(TAG, "the inserted Uri is:-> "+insertUri.toString());
-//			Log.d(TAG,"the inserted value is:-> "+cursor.getString(0)+" "+cursor.getString(4));
+//			if (debug) Log.d(TAG, "the inserted Uri is:-> "+insertUri.toString());
+//			if (debug) Log.d(TAG,"the inserted value is:-> "+cursor.getString(0)+" "+cursor.getString(4));
 //			cursor.moveToNext();
 //		}
 //		cursor.close();
@@ -264,12 +265,12 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 		
 		//TODO only the elements with same package must be in the long
 		if(modCursor==null | modCursor.getCount()==0) {
-			Log.d(TAG, "it is null");
+			if (debug) Log.d(TAG, "it is null");
 			return new long[0][3];
 		}
 		modCursor.moveToFirst();
-		Log.d(TAG, "lenght returned is:-> "+modCursor.getCount());// test all the elemets..
-		//Log.d(TAG, "some elements of first element:-> "+modCursor.getString(0)+" "+modCursor.getString(1)+" "+modCursor.getString(2)+" ");
+		if (debug) Log.d(TAG, "lenght returned is:-> "+modCursor.getCount());// test all the elemets..
+		//if (debug) Log.d(TAG, "some elements of first element:-> "+modCursor.getString(0)+" "+modCursor.getString(1)+" "+modCursor.getString(2)+" ");
 		long[][] modMatrix = new long[modCursor.getCount()][3];
 		int totRows = modCursor.getCount();
 		
@@ -281,7 +282,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 		}
 		
 		for(int i=0;i<totRows;i++){
-			Log.d(TAG, "the modMatrix:-> "+modMatrix[i][0]+" "+modMatrix[i][1]+" "+modMatrix[i][2]);
+			if (debug) Log.d(TAG, "the modMatrix:-> "+modMatrix[i][0]+" "+modMatrix[i][1]+" "+modMatrix[i][2]);
 			
 		}
 		return modMatrix;
@@ -289,7 +290,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 
 	@Override
 	protected void onPostExecute(String[] result) {
-		Log.d(TAG, "inside post execute");
+		if (debug) Log.d(TAG, "inside post execute");
 		// checked for the case when there is no modification....
 		String jsonString = result[0];
 		String jsonDeleteString = result[1];

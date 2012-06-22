@@ -10,7 +10,8 @@ import android.widget.TextView;
 
 public class SyncActivity extends Activity{
 	public final static int SYNC_REQUEST_CODE = 12035; 
-	private static final String TAGv = "debugv";
+	private static final String TAG = "SyncActivity";
+	private static final boolean debug = true;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -36,7 +37,7 @@ public class SyncActivity extends Activity{
 	}
 	private void syncResult(int resultCode, Intent intent) {
 		
-		Log.d(TAGv, "inside syncing back the result");
+		if (debug) Log.d(TAG, "inside syncing back the result");
 		TextView syncText = (TextView) findViewById(R.id.sync_textview);
 		syncText.setText("Adding the notes fetched from server");
 		AsyncApplyResult aar = new AsyncApplyResult(this);

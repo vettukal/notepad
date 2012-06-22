@@ -14,9 +14,11 @@ import android.net.Uri;
 import android.util.Log;
 
 public class SyncAdapter {
+	private static final boolean debug = true;
+	private static final String TAG = "SyncAdapter";
 	public static void startSync(Activity fromAcitivity) {
 		//Experimentation
-		Log.i("vincent", "inside the startSync of SyncAdapter");
+		if (debug) Log.d(TAG, "inside the startSync of SyncAdapter");
 		String[] PROJECTIONALL = new String[] {
 	            NotePad.Notes._ID, // 0
 	            NotePad.Notes.TITLE, // 1
@@ -41,7 +43,7 @@ public class SyncAdapter {
 		
 		
 		int totRows = cursor.getCount();
-		Log.i("vincent", "the total number of rows"+totRows);
+		if (debug) Log.d(TAG, "the total number of rows"+totRows);
 		if (cursor.moveToFirst()) { 
 			for(int i=0;i<totRows;i++) {
 				String tuple="";
@@ -49,7 +51,7 @@ public class SyncAdapter {
 					tuple=tuple+cursor.getString(j)+":";
 					
 				}
-				Log.d("vincent", tuple);
+				if (debug) Log.d(TAG, tuple);
 				cursor.moveToNext();
 			}
 			cursor.deactivate();
@@ -57,7 +59,7 @@ public class SyncAdapter {
 		}
 		
 		if(isIntentAvailable(fromAcitivity.getApplicationContext(), "vincent.start")) {
-			Log.i("vincent", "vincent.start is available");
+			if (debug) Log.d(TAG, "vincent.start is available");
 		}
 		
 		Intent syncIntent = new Intent(fromAcitivity,SyncActivity.class);
