@@ -12,8 +12,10 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Log;
 
-public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
+public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 	private static StringBuilder jsonBuilder = new StringBuilder();
+	private static StringBuilder jsonDeleteBuilder = new StringBuilder();
+	private static final boolean debug = true;
 	SyncActivity activity;
 	static String tag = "vincent";
 	static String TAG = "AsyncChangedNotes";
@@ -35,29 +37,13 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 	}
 
 	@Override
-	protected String[][] doInBackground(Void... params) {
+	protected String[] doInBackground(Void... params) {
 		
 		Log.d(tag, "inside the async Change notes");
 		jsonBuilder = new StringBuilder(); // needed so that previous results are not saved in builder.
-		/**
-		 *Note: No need for this section of code.  
-		 
-		Uri notesUri = Uri.parse(NotePad.Notes.CONTENT_URI.toString());
-		Cursor cursor = activity.getContentResolver().query(notesUri, PROJECTIONALL, null, null, null);
+		jsonDeleteBuilder = new StringBuilder();
 		
-		if (cursor.moveToFirst()) { }
-
-        int totRows = cursor.getCount();
-        Log.d(tag, "total row in notes table:-> "+totRows );
-        for(int i=0;i<totRows;i++) {
-        	Log.d(tag, cursor.getString(0));
-        	Log.d(tag, cursor.getString(1));
-        	Log.d(tag, cursor.getString(2));
-            cursor.moveToNext();
-        }
-        */
-        
-        String MOD_AUTHORITY = "org.openintents.mods.contentprovider";
+        String MOD_AUTHORITY = "org.openintents.cloudsync.contentprovider";
 		String MOD_BASE_PATH = "modifys";
 		
         Uri modUri = Uri.parse("content://" + MOD_AUTHORITY + "/" + MOD_BASE_PATH);
@@ -65,27 +51,23 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 		Cursor modCursor = activity.getContentResolver().query(modUri, null, null, null, null);
 		
 		long[][] modMatrix = getmodMatrix(modCursor);
-		
-		/**
-		if(modMatrix.length==0) {
-			Log.d(TAG, "modMatrix lenght returned is 0");
-			modCursor.close();
-			addAllNotesToModTable();
-		} else {
-		*/
-			Log.d(TAG, "lenght of the modMatrix is:-> "+modMatrix.length);
-			
-			Uri notesUri = Uri.parse(NotePad.Notes.CONTENT_URI.toString());
-			Cursor cursor = activity.getContentResolver().query(notesUri, PROJECTIONALL, null, null, null);
-			cursor.moveToFirst();
-			int totRowsn = cursor.getCount();
-			for(int i=0;i<totRowsn;i++) {
-				Log.d(TAG, "going into checkAndAdd with note:-> "+cursor.getString(1));
-				checkAndAdd(cursor,modMatrix);
-				cursor.moveToNext();
-			}
-			// maybe cursor can be close
-		//} else
+
+		Log.d(TAG, "lenght of the modMatrix is:-> " + modMatrix.length);
+
+		Uri notesUri = Uri.parse(NotePad.Notes.CONTENT_URI.toString());
+		Cursor cursor = activity.getContentResolver().query(notesUri,
+				PROJECTIONALL, null, null, null);
+		cursor.moveToFirst();
+		int totRowsn = cursor.getCount();
+		for (int i = 0; i < totRowsn; i++) {
+			Log.d(TAG,
+					"going into checkAndAdd with note:-> "
+							+ cursor.getString(1));
+			checkAndAdd(cursor, modMatrix);
+			cursor.moveToNext();
+		}
+		// maybe cursor can be close
+
 		// testing the results..
 		modCursor.close();
 		modCursor = activity.getContentResolver().query(modUri, null, null, null, null);
@@ -95,6 +77,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 			Log.d(TAG, "TEsting the last: "+modCursor.getString(0)+" "+modCursor.getString(1));
 			modCursor.moveToNext();
 		}
+		
 		//jsonbuilder.length() - 1 is needed to eliminate the last comma in the building process
 		String jsonBuilderString = "";
 		if(jsonBuilder.length()>1) {
@@ -106,18 +89,81 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 		    JSONObject mainJobj = new JSONObject(jsonData);
 			JSONArray jarray = mainJobj.getJSONArray("data");
 		} catch (JSONException e) {
-			Log.d(TAG, "exception in main json arra",e);
+			Log.d(TAG, "exception in main json array",e);
 		}
-		String[][] retJson = new String[1][1];
-		retJson[0][0] = jsonData;
+		String[] retJson = new String[2];
+		retJson[0] = jsonData;
+		
+		checkDeletes(cursor,modMatrix); // this is going to check & add delete ids to jsonDelBuilder
+		
+		String jsonDeleteBuilderString = "";
+		if(jsonDeleteBuilder.length()>1) { // -1 necessary to eliminate last ","
+			jsonDeleteBuilderString = jsonDeleteBuilder.substring(0, jsonDeleteBuilder.length()-1);
+		}
+		String jsonDeleteData = "{ \"data\" : [" + jsonDeleteBuilderString + "] }";
+		retJson[1] = jsonDeleteData;
+		if (debug) Log.i(TAG,"jsonDeleteData "+jsonDeleteData);
 
 		return retJson;
+	}
+
+	private String checkDeletes(Cursor cursor, long[][] modMatrix) {
+		// TODO Auto-generated method stub
+		// loop the Notes cursor through modmatrix. If matching id is found means not deleted
+		
+		
+		int totrow =  cursor.getCount();
+		boolean delflag = true;
+		
+		cursor.moveToFirst();
+		long[] noteArray = new long[totrow];
+		for (int i = 0; i < totrow; i++) {
+			noteArray[i] = cursor.getLong(0);
+			cursor.moveToNext();
+		}
+		
+		for (int i = 0; i < modMatrix.length; i++) {
+			delflag = true;
+			for (int j = 0; j < noteArray.length; j++) {
+				if(modMatrix[i][1]==noteArray[j]) {
+					// this means it NOT deleted
+					delflag = false;
+					break;
+				}
+			}
+			if (delflag) {
+				// this means the modMatrix element i could not be found
+				addToJsonDel(modMatrix[i][1]);
+			}
+		}
+		
+		return null;
+	}
+
+	private void addToJsonDel(long id) {
+		// TODO Auto-generated method stub
+		String jsonNoteString= " { \"id\":"+id+"}";
+		if (debug) Log.i(TAG,"jsonDelString"+jsonNoteString);
+		
+		jsonDeleteBuilder.append(jsonNoteString);
+		jsonDeleteBuilder.append(",");
+		
+		if (debug)
+			try {
+				Log.i(TAG,"checkJnote"+new JSONObject(jsonNoteString).getLong("id"));
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				
+				e.printStackTrace();
+			}
+		
+		
 	}
 
 	private void checkAndAdd(Cursor cursor, long[][] modMatrix) {
 		long localModDate = Long.parseLong(cursor.getString(4));
 		long localId = Long.parseLong(cursor.getString(0));
-		String MOD_AUTHORITY = "org.openintents.mods.contentprovider";
+		String MOD_AUTHORITY = "org.openintents.cloudsync.contentprovider";
 		String MOD_BASE_PATH = "modifys";
         Uri modUri = Uri.parse("content://" + MOD_AUTHORITY + "/" + MOD_BASE_PATH);
         boolean flag=true;
@@ -192,26 +238,26 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 		
 	}
 
-	private void addAllNotesToModTable() {
-		Uri notesUri = Uri.parse(NotePad.Notes.CONTENT_URI.toString());
-		Cursor cursor = activity.getContentResolver().query(notesUri, PROJECTIONALL, null, null, null);
-		cursor.moveToFirst();
-		String MOD_AUTHORITY = "org.openintents.mods.contentprovider";
-		String MOD_BASE_PATH = "modifys";
-        Uri modUri = Uri.parse("content://" + MOD_AUTHORITY + "/" + MOD_BASE_PATH);
-        ContentValues values=new ContentValues();
-		int totRows = cursor.getCount();
-		for(int i=0;i<totRows;i++) {
-			values.put("localid", cursor.getString(0));
-			values.put("moddate", cursor.getString(4));
-			values.put("pckname", activity.getPackageName());
-			Uri insertUri = activity.getContentResolver().insert(modUri, values);
-			Log.d(TAG, "the inserted Uri is:-> "+insertUri.toString());
-			Log.d(TAG,"the inserted value is:-> "+cursor.getString(0)+" "+cursor.getString(4));
-			cursor.moveToNext();
-		}
-		cursor.close();
-	}
+//	private void addAllNotesToModTable() {
+//		Uri notesUri = Uri.parse(NotePad.Notes.CONTENT_URI.toString());
+//		Cursor cursor = activity.getContentResolver().query(notesUri, PROJECTIONALL, null, null, null);
+//		cursor.moveToFirst();
+//		String MOD_AUTHORITY = "org.openintents.cloudsync.contentprovider";
+//		String MOD_BASE_PATH = "modifys";
+//        Uri modUri = Uri.parse("content://" + MOD_AUTHORITY + "/" + MOD_BASE_PATH);
+//        ContentValues values=new ContentValues();
+//		int totRows = cursor.getCount();
+//		for(int i=0;i<totRows;i++) {
+//			values.put("localid", cursor.getString(0));
+//			values.put("moddate", cursor.getString(4));
+//			values.put("pckname", activity.getPackageName());
+//			Uri insertUri = activity.getContentResolver().insert(modUri, values);
+//			Log.d(TAG, "the inserted Uri is:-> "+insertUri.toString());
+//			Log.d(TAG,"the inserted value is:-> "+cursor.getString(0)+" "+cursor.getString(4));
+//			cursor.moveToNext();
+//		}
+//		cursor.close();
+//	}
 
 	private long[][] getmodMatrix(Cursor modCursor) {
 		
@@ -242,13 +288,15 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[][]>{
 	}
 
 	@Override
-	protected void onPostExecute(String[][] result) {
+	protected void onPostExecute(String[] result) {
 		Log.d(TAG, "inside post execute");
 		// checked for the case when there is no modification....
-		String jsonString = result[0][0];
+		String jsonString = result[0];
+		String jsonDeleteString = result[1];
 		if(SyncAdapter.isIntentAvailable(activity, "vincent.start")) {
 			Intent syncIntent = new Intent("vincent.start");
 			syncIntent.putExtra("data", jsonString);
+			syncIntent.putExtra("delete", jsonDeleteString);
 			syncIntent.putExtra("package", activity.getPackageName());
 			activity.startActivityForResult(syncIntent, SyncActivity.SYNC_REQUEST_CODE);
 		}
