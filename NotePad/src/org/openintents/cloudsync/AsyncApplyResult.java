@@ -13,7 +13,7 @@ import android.os.AsyncTask;
 import android.provider.ContactsContract.CommonDataKinds.Note;
 import android.util.Log;
 
-public class AsyncApplyResult extends AsyncTask<String, Void, String>{
+public class AsyncApplyResult extends AsyncTask<String[], Void, String>{
 	static String tag = "vincent";
 	static String TAG = "AsyncApplyResult";
 	private static final boolean debug = true;
@@ -37,10 +37,12 @@ public class AsyncApplyResult extends AsyncTask<String, Void, String>{
 	}
 	
 	@Override
-	protected String doInBackground(String... params) {
+	protected String doInBackground(String[]... params) {
 		
 		if (debug) Log.v(TAG, "do in back of apply result");
-		String jsonData = params[0];
+		String[] paramres = params[0];
+		String jsonData = paramres[0];
+		String deleteData = paramres[1];
 		try {
 			JSONObject jsonMainObj = new JSONObject(jsonData);
 			JSONArray jsonArray = jsonMainObj.getJSONArray("data");
@@ -134,7 +136,7 @@ public class AsyncApplyResult extends AsyncTask<String, Void, String>{
 			Uri insertUri = activity.getContentResolver().insert(notesUri, values);
 			if (debug) Log.v(TAG, "inserted into the notepad: "+insertUri);
 			// Now insert the new got Id form insertUri into idMapTable
-			String IDMAP_AUTHORITY = "org.openintents.idmap.contentprovider";
+			String IDMAP_AUTHORITY = "org.openintents.cloudsync.contentprovider";
 			
 			String IDMAP_BASE_PATH = "idmaps";
 			Uri IDMAP_CONTENT_URI = Uri.parse("content://" + IDMAP_AUTHORITY

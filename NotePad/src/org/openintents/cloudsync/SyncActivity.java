@@ -43,10 +43,15 @@ public class SyncActivity extends Activity{
 		AsyncApplyResult aar = new AsyncApplyResult(this);
 		Bundle b = intent.getExtras();
 		String jsonData = "";
+		String deleteData = "";
 		if(b.containsKey("jsonData")) {
 			jsonData = b.getString("jsonData");
 		}
-		aar.execute(jsonData);
+		if(b.containsKey("delete")) {
+			deleteData = b.getString("delete");
+		}
+		
+		aar.execute(new String[]{jsonData,deleteData});
 	}
 	
 	void syncComplete() {

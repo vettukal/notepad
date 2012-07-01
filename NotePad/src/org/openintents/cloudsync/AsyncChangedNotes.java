@@ -157,8 +157,6 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 				
 				e.printStackTrace();
 			}
-		
-		
 	}
 
 	private void checkAndAdd(Cursor cursor, long[][] modMatrix) {
@@ -297,6 +295,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 		if(SyncAdapter.isIntentAvailable(activity, "vincent.start")) {
 			Intent syncIntent = new Intent("vincent.start");
 			syncIntent.putExtra("data", jsonString);
+			if (debug) Log.d(TAG,"changed notes delete:-> "+jsonDeleteString);
 			syncIntent.putExtra("delete", jsonDeleteString);
 			syncIntent.putExtra("package", activity.getPackageName());
 			activity.startActivityForResult(syncIntent, SyncActivity.SYNC_REQUEST_CODE);
