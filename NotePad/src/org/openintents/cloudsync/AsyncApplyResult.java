@@ -8,6 +8,7 @@ import org.openintents.notepad.NotePadProvider;
 import org.openintents.notepad.NotePad.Notes;
 
 import android.content.ContentValues;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.provider.ContactsContract.CommonDataKinds.Note;
@@ -31,6 +32,9 @@ public class AsyncApplyResult extends AsyncTask<String[], Void, String>{
         NotePad.Notes.SELECTION_END,
         NotePad.Notes.SCROLL_POSITION//10
     };
+	static final int MOD_MODIFIED = 2;
+	static final int MOD_LOCALID = 1;
+	static final int NOTE_MODIFIED = 1;
 	
 	public AsyncApplyResult(SyncActivity activity) {
 		this.activity = activity;
@@ -48,7 +52,8 @@ public class AsyncApplyResult extends AsyncTask<String[], Void, String>{
 			JSONArray jsonArray = jsonMainObj.getJSONArray("data");
 			if(jsonArray.length() == 0){
 				// this means nothing is to be updated back in OI Notes
-				return null;
+				if (debug) Log.d(TAG,"No notes to apply back:-> "+"");
+				//return null;
 			}
 			
 			for(int i=0;i<jsonArray.length();i++){
@@ -99,7 +104,98 @@ public class AsyncApplyResult extends AsyncTask<String[], Void, String>{
 			e.printStackTrace();
 		}
 		
+		deleteNotes(deleteData);
+		refreshModTable();
 		return null;
+	}
+
+	private void refreshModTable() {
+		
+		//
+		
+		long[][] modMatrix = getmodMatrix();
+		long[][] noteMatrix = getNoteMatrix();
+		String MOD_AUTHORITY = "org.openintents.cloudsync.contentprovider";
+		String MOD_BASE_PATH = "modifys";
+        
+		for (int i = 0; i < modMatrix.length; i++) {
+			Uri modUri = Uri.parse("content://" + MOD_AUTHORITY + "/" + MOD_BASE_PATH);
+			boolean notfound = true;
+			for (int j = 0; j < noteMatrix.length; j++) {
+				if(modMatrix[i][MOD_LOCALID] == noteMatrix[j][0]) {
+					notfound = false;
+					if(modMatrix[i][MOD_MODIFIED] == noteMatrix[j][1]) {
+						// its ok!
+					} else {
+						if (debug) Log.e(TAG,"This should not happen!!!:-> "+modMatrix[i][MOD_MODIFIED]);
+					}
+				}
+			}
+			if(notfound) {
+				// this element of modMatrix is not there in OI Note and hence should be deleted
+				modUri = Uri.withAppendedPath(modUri, Long.toString(modMatrix[i][0]));
+				int dels = activity.getContentResolver().delete(modUri, null, null);
+				if (debug) Log.d(TAG,"deleted the string with id:-> "+Long.toString(modMatrix[i][0]));
+			}
+		}
+		/**
+		 * deleting the modTable elements which do not exist in note table can be easily done by
+		 * first taking all the ids from NOte table into an array. Sort it, and do binary search of each
+		 * modTable element in that array. if found ok else just delete it.
+		 */
+		
+		
+	}
+
+	private long[][] getNoteMatrix() {
+		Uri notesUri = Uri.parse(NotePad.Notes.CONTENT_URI.toString());
+		Cursor cursor = activity.getContentResolver().query(notesUri,
+				PROJECTIONALL, null, null, null);
+		int totalrow = cursor.getCount();
+		long[][] noteArray = new long[totalrow][2];
+		cursor.moveToFirst();
+		if (debug) Log.d(TAG,"test cursor:-> "+cursor.getString(0));
+		if (debug) Log.d(TAG,"test cursor long:-> "+cursor.getLong(0));
+		for (int i = 0; i < totalrow; i++) {
+			noteArray[i][0] = cursor.getLong(0);
+			noteArray[i][1] = cursor.getLong(4);
+			
+		}
+		 return noteArray;
+		
+		
+	}
+
+	private void deleteNotes(String deleteData) {
+		try {
+			JSONObject jsonMainObj = new JSONObject(deleteData);
+			JSONArray jsonArray = jsonMainObj.getJSONArray("data");
+			if(jsonArray.length() == 0){
+				// this means nothing is to be updated back in OI Notes
+				//return;
+				if (debug) Log.d(TAG,"Nothing to delete from client:-> "+"");
+			}
+			
+			for(int i=0;i<jsonArray.length();i++){
+				
+				JSONObject jobj = jsonArray.getJSONObject(i);
+				if (debug) Log.d(TAG,"message:-> "+jobj.getLong("id"));
+				int localId = jobj.getInt("id");
+				
+				Uri notes = Uri.parse(NotePad.Notes.CONTENT_URI.toString());
+				notes = Uri.withAppendedPath(notes, String.valueOf(localId));
+				
+				int dels = activity.getContentResolver().delete(notes, null, null);
+				if (debug) Log.d(TAG,"message:-> "+dels);
+			}
+		}
+		
+		catch (Exception e) {
+			// TODO: handle exception
+		}
+				
+				
+		
 	}
 
 	private void insertNote(JSONObject jobj) {
@@ -163,6 +259,37 @@ public class AsyncApplyResult extends AsyncTask<String[], Void, String>{
 		activity.syncComplete();
 		super.onPostExecute(result);
 	}
+	
+	private long[][] getmodMatrix() {
+		
+		String MOD_AUTHORITY = "org.openintents.cloudsync.contentprovider";
+		String MOD_BASE_PATH = "modifys";
+		Uri modUri = Uri.parse("content://" + MOD_AUTHORITY + "/" + MOD_BASE_PATH);
+		Cursor modCursor = activity.getContentResolver().query(modUri, null, null, null, null);
+		
+		if(modCursor==null | modCursor.getCount()==0) {
+			if (debug) Log.d(TAG, "it is null");
+			return new long[0][3];
+		}
+		modCursor.moveToFirst();
+		
+		long[][] modMatrix = new long[modCursor.getCount()][3];
+		int totRows = modCursor.getCount();
+		
+		for(int i=0;i<totRows;i++){
+			modMatrix[i][0] = Long.parseLong(modCursor.getString(0));
+			modMatrix[i][1] = Long.parseLong(modCursor.getString(1));
+			modMatrix[i][2] = Long.parseLong(modCursor.getString(2));
+			modCursor.moveToNext();
+		}
+		
+		for(int i=0;i<totRows;i++){
+			if (debug) Log.d(TAG, "the modMatrix:-> "+modMatrix[i][0]+" "+modMatrix[i][1]+" "+modMatrix[i][2]);
+			
+		}
+		return modMatrix;
+	}
+	
 	
 	
 
