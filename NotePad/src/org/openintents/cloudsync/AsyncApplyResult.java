@@ -47,6 +47,9 @@ public class AsyncApplyResult extends AsyncTask<String[], Void, String>{
 		String[] paramres = params[0];
 		String jsonData = paramres[0];
 		String deleteData = paramres[1];
+		Ulg.d("vincent", "[applyres] inside the applyResult");
+		Ulg.d("[applyres] Apply json data is: "+jsonData);
+		Ulg.d("[applyres] apply delete data is "+deleteData);
 		try {
 			JSONObject jsonMainObj = new JSONObject(jsonData);
 			JSONArray jsonArray = jsonMainObj.getJSONArray("data");
@@ -103,8 +106,9 @@ public class AsyncApplyResult extends AsyncTask<String[], Void, String>{
 			
 			e.printStackTrace();
 		}
-		
+		if (debug) Log.d(TAG,"going to delte notes:-> "+"");
 		deleteNotes(deleteData);
+		if (debug) Log.d(TAG,"deleted notes:-> "+"");
 		refreshModTable();
 		return null;
 	}
@@ -115,13 +119,30 @@ public class AsyncApplyResult extends AsyncTask<String[], Void, String>{
 		
 		long[][] modMatrix = getmodMatrix();
 		long[][] noteMatrix = getNoteMatrix();
+		if(noteMatrix.length == 0 | modMatrix.length == 0) { return; }
+		
 		String MOD_AUTHORITY = "org.openintents.cloudsync.contentprovider";
 		String MOD_BASE_PATH = "modifys";
         
+		Ulg.d("-------------------------");
+		for (int i = 0; i < noteMatrix.length; i++) {
+			Ulg.d("[applyRes] notematrix: "+noteMatrix[i][0]+" "+noteMatrix[i][1]);
+		}
+		
+		for (int i = 0; i < modMatrix.length; i++) {
+			Ulg.d("[applyRes] Modmatrix id= "+modMatrix[i][0]+" : "+modMatrix[i][MOD_LOCALID]+" "+modMatrix[i][MOD_MODIFIED]);
+		}
+		Ulg.d("------------------------");
+		Ulg.d("------------------------");
 		for (int i = 0; i < modMatrix.length; i++) {
 			Uri modUri = Uri.parse("content://" + MOD_AUTHORITY + "/" + MOD_BASE_PATH);
 			boolean notfound = true;
+			
 			for (int j = 0; j < noteMatrix.length; j++) {
+				long modlocalid = modMatrix[i][MOD_LOCALID];
+				long notelocalid = noteMatrix[j][0];
+				long modModi = modMatrix[i][MOD_MODIFIED];
+				long notemodi = noteMatrix[j][1];
 				if(modMatrix[i][MOD_LOCALID] == noteMatrix[j][0]) {
 					notfound = false;
 					if(modMatrix[i][MOD_MODIFIED] == noteMatrix[j][1]) {
@@ -137,6 +158,7 @@ public class AsyncApplyResult extends AsyncTask<String[], Void, String>{
 				int dels = activity.getContentResolver().delete(modUri, null, null);
 				if (debug) Log.d(TAG,"deleted the string with id:-> "+Long.toString(modMatrix[i][0]));
 			}
+			
 		}
 		/**
 		 * deleting the modTable elements which do not exist in note table can be easily done by
@@ -148,18 +170,22 @@ public class AsyncApplyResult extends AsyncTask<String[], Void, String>{
 	}
 
 	private long[][] getNoteMatrix() {
+		
 		Uri notesUri = Uri.parse(NotePad.Notes.CONTENT_URI.toString());
 		Cursor cursor = activity.getContentResolver().query(notesUri,
 				PROJECTIONALL, null, null, null);
 		int totalrow = cursor.getCount();
 		long[][] noteArray = new long[totalrow][2];
 		cursor.moveToFirst();
+		if(totalrow == 0){
+			return noteArray;
+		}
 		if (debug) Log.d(TAG,"test cursor:-> "+cursor.getString(0));
 		if (debug) Log.d(TAG,"test cursor long:-> "+cursor.getLong(0));
 		for (int i = 0; i < totalrow; i++) {
 			noteArray[i][0] = cursor.getLong(0);
 			noteArray[i][1] = cursor.getLong(4);
-			
+			cursor.moveToNext();
 		}
 		 return noteArray;
 		
@@ -176,10 +202,11 @@ public class AsyncApplyResult extends AsyncTask<String[], Void, String>{
 				if (debug) Log.d(TAG,"Nothing to delete from client:-> "+"");
 			}
 			
+			Ulg.d("[appyres] lenth of del array: "+jsonArray.length());
 			for(int i=0;i<jsonArray.length();i++){
 				
 				JSONObject jobj = jsonArray.getJSONObject(i);
-				if (debug) Log.d(TAG,"message:-> "+jobj.getLong("id"));
+				if (debug) Ulg.d(TAG,"going to delete note from client:-> "+jobj.getLong("id"));
 				int localId = jobj.getInt("id");
 				
 				Uri notes = Uri.parse(NotePad.Notes.CONTENT_URI.toString());

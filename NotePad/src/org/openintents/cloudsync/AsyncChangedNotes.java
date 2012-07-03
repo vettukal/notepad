@@ -40,6 +40,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 	@Override
 	protected String[] doInBackground(Void... params) {
 		
+		dumpTables();
 		if (debug) Log.d(TAG, "inside the async Change notes");
 		jsonBuilder = new StringBuilder(); // needed so that previous results are not saved in builder.
 		jsonDeleteBuilder = new StringBuilder();
@@ -52,6 +53,13 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 		Cursor modCursor = activity.getContentResolver().query(modUri, null, null, null, null);
 		
 		long[][] modMatrix = getmodMatrix(modCursor);
+		
+		/**
+		 * 
+		 */
+		for (int i = 0; i < modMatrix.length; i++) {
+			if (debug) Log.d(TAG,"looping the modMatrix:-> id:"+modMatrix[i][1]+" time: "+modMatrix[i][2]);
+		}
 
 		if (debug) Log.d(TAG, "lenght of the modMatrix is:-> " + modMatrix.length);
 
@@ -106,6 +114,36 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 		if (debug) if (debug) Log.i(TAG,"jsonDeleteData "+jsonDeleteData);
 
 		return retJson;
+	}
+
+	private void dumpTables() {
+		Uri notesUri = Uri.parse(NotePad.Notes.CONTENT_URI.toString());
+		Cursor cursor = activity.getContentResolver().query(notesUri,
+				PROJECTIONALL, null, null, null);
+		cursor.moveToFirst();
+		int totRowsn = cursor.getCount();
+		Ulg.d("[ChngNote] Number of notes in NoteTable: "+totRowsn);
+		for (int i = 0; i < totRowsn; i++) {
+			Ulg.d("[ChngNote] NoteTable: "+cursor.getString(0)+" "+cursor.getString(1)+" "+cursor.getString(4));
+			cursor.moveToNext();
+		}
+		cursor.close();
+		
+		String MOD_AUTHORITY = "org.openintents.cloudsync.contentprovider";
+		String MOD_BASE_PATH = "modifys";
+		Uri modUri = Uri.parse("content://" + MOD_AUTHORITY + "/" + MOD_BASE_PATH);
+        if (debug) Log.d(TAG, "uri is:-> "+modUri.toString());//del this
+		Cursor modCursor = activity.getContentResolver().query(modUri, null, null, null, null);
+		modCursor.moveToFirst();
+		int modTot = modCursor.getCount();
+		for(int i = 0; i< modTot; i++) {
+			Ulg.d("[ChngNote] ModTable: "+modCursor.getString(0)+" "+modCursor.getString(1)+" "+modCursor.getString(2));
+			modCursor.moveToNext();
+		}
+		modCursor.close();
+		Ulg.d("-----------------------");
+		Ulg.d("-----------------------");
+		
 	}
 
 	private String checkDeletes(Cursor cursor, long[][] modMatrix) {
@@ -168,6 +206,14 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
         boolean flag=true;
 		for(int i=0;i<modMatrix.length;i++) {
 			flag=true;
+			/**
+			 * 
+			 */
+			long modid = modMatrix[i][1];
+			long modtime = modMatrix[i][2];
+			/**
+			 * 
+			 */
 			if(localId==modMatrix[i][1]) {
 				flag=false;
 				if(localModDate==modMatrix[i][2]) {
@@ -190,6 +236,7 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 			}
 		}
 		if(flag) { // this means the record with this id was not found in previous sync db. i.e this is new note
+			modUri = Uri.parse("content://" + MOD_AUTHORITY + "/" + MOD_BASE_PATH);
 			ContentValues values = new ContentValues();
 			values.put("localid", localId);
 			values.put("moddate", localModDate);
@@ -288,6 +335,8 @@ public class AsyncChangedNotes extends AsyncTask<Void, Void, String[]>{
 
 	@Override
 	protected void onPostExecute(String[] result) {
+		Ulg.d("[ChngNote] inside postexcute of ChngNote");
+		dumpTables();
 		if (debug) Log.d(TAG, "inside post execute");
 		// checked for the case when there is no modification....
 		String jsonString = result[0];
