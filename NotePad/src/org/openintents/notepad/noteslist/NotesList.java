@@ -34,7 +34,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 
-import org.openintents.cloudsync.SyncActivity;
 import org.openintents.distribution.DistributionLibraryListActivity;
 import org.openintents.distribution.DownloadOIAppDialog;
 import org.openintents.intents.CryptoIntents;
@@ -45,6 +44,7 @@ import org.openintents.notepad.NotePadProvider;
 import org.openintents.notepad.PreferenceActivity;
 import org.openintents.notepad.PrivateNotePadIntents;
 import org.openintents.notepad.R;
+import org.openintents.notepad.cloudsync.SyncActivity;
 import org.openintents.notepad.crypto.EncryptActivity;
 import org.openintents.notepad.dialog.DeleteConfirmationDialog;
 import org.openintents.notepad.filename.DialogHostingActivity;
