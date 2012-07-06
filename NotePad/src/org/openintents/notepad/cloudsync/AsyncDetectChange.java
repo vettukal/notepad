@@ -1,0 +1,267 @@
+package org.openintents.notepad.cloudsync;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+
+import org.openintents.notepad.NotePad;
+import org.openintents.notepad.cloudsync.util.ArrayUtil;
+import org.openintents.notepad.cloudsync.util.JsonUtil;
+
+import android.database.Cursor;
+import android.net.Uri;
+import android.os.AsyncTask;
+import android.util.Log;
+
+public class AsyncDetectChange extends AsyncTask<Void, Void, String[]>{
+	
+	public static final int NOTE_ARRAY_LOCAL_ID = 0;
+	public static final int NOTE_ARRAY_CREATED_DATE = 1;
+	public static final int NOTE_ARRAY_MODIFIED_DATE = 2;
+	
+	public static final int MOD_ARRAY_LUID = 1;
+	public static final int MOD_ARRAY_MODIFIED_DATE = 2;
+	
+	static final String PACKAGE_NAME = "org.openintents.notepad";
+	private long[][] noteArray;
+	private long[][] modArray;
+	
+	public static final String NOTE_AUTHORITY = "org.openintents.notepad";
+	public static final Uri NOTE_CONTENT_URI = Uri.parse("content://"+ NOTE_AUTHORITY + "/notes");
+	public static final String MOD_AUTHORITY = "org.openintents.cloudsync.contentprovider";
+	public static final String MOD_BASE_PATH = "modifys";	
+	public static final Uri MOD_CONTENT_URI = Uri.parse("content://" + MOD_AUTHORITY + "/" + MOD_BASE_PATH);
+	
+	private static final boolean debug = true;
+	private static final String TAG = "AsyncDetectChange";
+	
+	private static StringBuilder jsonBuilder = new StringBuilder();
+	private static StringBuilder jsonDeleteBuilder = new StringBuilder();
+	
+	private SyncActivity activity;
+	
+	public AsyncDetectChange(SyncActivity activity) {
+		this.activity = activity;
+	}
+
+	@Override
+	protected String[] doInBackground(Void... arg0) {
+		jsonBuilder = new StringBuilder();  // needed so that previous results are not saved in builder.
+		jsonDeleteBuilder = new StringBuilder();
+		
+		noteArray = getNotesArray();
+		modArray = getModArray();
+		
+		if(hasResetHappened()) {
+			deleteOISyncData(PACKAGE_NAME);
+		}
+		
+		ArrayList<Long> newNoteList = getNewIdList();
+		ArrayList<Long> modNoteList = getModifiedIdList();
+		ArrayList<Long> delNoteList = getDelIdList();
+		
+		addToJson(newNoteList);
+		addToJson(modNoteList);
+		Ulg.d(""+jsonBuilder);
+		addToDelJson(delNoteList);
+		
+		Ulg.d(packJson());
+		Ulg.d(packDelJson());
+		return new String[]{packJson(),packDelJson()};
+	}
+
+
+	private String packDelJson() {
+		String jsonDeleteBuilderString = "";
+		if(jsonDeleteBuilder.length()>1) { // -1 necessary to eliminate last ","
+			jsonDeleteBuilderString = jsonDeleteBuilder.substring(0, jsonDeleteBuilder.length()-1);
+		}
+		String jsonDeleteData = "{ \"data\" : [" + jsonDeleteBuilderString + "] }";
+		return jsonDeleteData;
+	}
+
+	private String packJson() {
+		
+		String jsonBuilderString = "";
+		// This is to remove last comma that is at the end
+		if(jsonBuilder.length()>1) {
+			jsonBuilderString = jsonBuilder.substring(0, jsonBuilder.length()-1);
+		}
+		String jsonData = "{ \"data\" : [" + jsonBuilderString + "] }";
+		return jsonData;
+	}
+
+	private void addToDelJson(ArrayList<Long> delNoteList) {
+		
+		for (int i = 0; i < delNoteList.size(); i++) {
+			jsonDeleteBuilder = JsonUtil.addToJsonDel(delNoteList.get(i),jsonDeleteBuilder);
+		}
+		
+	}
+
+	private ArrayList<Long> getDelIdList() {
+		
+		ArrayList<Long> delIdList = new ArrayList<Long>();
+		
+		long[] noteLocalIdList = ArrayUtil.getSingleDimenArray(noteArray, NOTE_ARRAY_LOCAL_ID);
+		long[] modLocalIdList = ArrayUtil.getModLocalIdArray(modArray);
+		
+		Arrays.sort(noteLocalIdList);
+		Arrays.sort(modLocalIdList);
+		
+		for (long modLocalId : modLocalIdList) {
+			if(Arrays.binarySearch(noteLocalIdList, modLocalId) > -1){
+				// This is not deleted as it is present in noteLocalId and modLocalId
+			} else {
+				delIdList.add(modLocalId);
+			}
+		}
+		return delIdList;
+	}
+
+	private void addToJson(ArrayList<Long> newNoteList) {
+		
+		String[] PROJECTIONALL = new String[] {
+	        NotePad.Notes._ID, // 0
+	        NotePad.Notes.TITLE, // 1
+	        NotePad.Notes.NOTE,//2
+	        NotePad.Notes.CREATED_DATE,
+	        NotePad.Notes.MODIFIED_DATE,//4
+	        NotePad.Notes.TAGS,
+	        NotePad.Notes.ENCRYPTED,//6
+	        NotePad.Notes.THEME,
+	        NotePad.Notes.SELECTION_START,//8
+	        NotePad.Notes.SELECTION_END,
+	        NotePad.Notes.SCROLL_POSITION//10
+	    };
+		
+		Cursor cursor = activity.getContentResolver().query(NOTE_CONTENT_URI, PROJECTIONALL, null, null, null);
+		cursor.moveToFirst();
+		
+		for (int i = 0; i < cursor.getCount(); i++) {
+			if(newNoteList.contains((Long) cursor.getLong(0))) {
+				jsonBuilder = JsonUtil.addToJson(cursor,jsonBuilder);
+			}
+			cursor.moveToNext();
+		}
+		cursor.close();
+	}
+
+	private ArrayList<Long> getModifiedIdList() {
+		
+		ArrayList<Long> modifiedIdList = new ArrayList<Long>();
+		
+		for (int i = 0; i < noteArray.length; i++) {
+			for (int j = 0; j < modArray.length; j++) {
+				if(noteArray[i][NOTE_ARRAY_LOCAL_ID] == ArrayUtil.getLocalIdFromLUID(modArray[j][MOD_ARRAY_LUID])) {
+					if(noteArray[i][NOTE_ARRAY_MODIFIED_DATE] == modArray[j][MOD_ARRAY_MODIFIED_DATE]) {
+						// Do nothing. Because it is same as previous syncs note
+					} else {
+						modifiedIdList.add(noteArray[i][NOTE_ARRAY_LOCAL_ID]);
+					}
+				}
+			}
+		}
+		return modifiedIdList;
+	}
+	
+	/**
+	 * It makes the localId array from oi Note and modTable
+	 * For modTable first gets localId array from LUID array.
+	 * Then if the element of localId array is found in ModId array do nothing
+	 * else add to the newIdList which is returned.
+	 * @return
+	 */
+
+	private ArrayList<Long> getNewIdList() {
+		
+		ArrayList<Long> newIdList = new ArrayList<Long>();
+		
+		long[] noteLocalIdArray = ArrayUtil.getSingleDimenArray(noteArray, NOTE_ARRAY_LOCAL_ID);
+		long[] modLocalIdArray = ArrayUtil.getModLocalIdArray(modArray);
+		
+		Arrays.sort(noteLocalIdArray);
+		Arrays.sort(modLocalIdArray);
+		
+		for (long noteLocalId : noteLocalIdArray) {
+			if(Arrays.binarySearch(modLocalIdArray, noteLocalId) > -1) {
+				// Do nothing as note already exist in modTable
+			} else {
+				newIdList.add(noteLocalId);
+			}
+		}
+		return newIdList;
+	}
+
+	private void deleteOISyncData(String packageName) {
+		// TODO Auto-generated method stub
+		if (debug) Log.d(TAG,"Going to delete all OI Sync Data with this pckName:-> "+packageName);
+		
+	}
+	
+	/**
+	 * This method checks whether the OI Note was reset or not.
+	 * This is done by checking the modLUID which is stored from previous sync.
+	 * And noteLUID which is made by multiplying localid*milli_sec_factor+createdDate
+	 * If none of the modLUID is found in noteLUID array this means every element from previous
+	 * was deleted.
+	 * @return false if it was not reset and hence a same value of modLUID and noteLUID was found.
+	 */
+	private boolean hasResetHappened() {
+		
+		long[] LUIDArray = ArrayUtil.getSingleDimenArray(modArray,MOD_ARRAY_LUID); 
+		
+		long[] noteLUIDArray = ArrayUtil.makeLUIDArray(noteArray);
+		
+		Arrays.sort(LUIDArray);
+		Arrays.sort(noteLUIDArray);
+		
+		if(LUIDArray.length == 0) { return false; }
+		for (long modLocalId : LUIDArray) {
+			if(Arrays.binarySearch(noteLUIDArray, modLocalId) > -1) {
+				return false;
+			}
+		}
+		
+		return true;
+	}
+
+
+	private long[][] getModArray() {
+		
+		Cursor cursor = activity.getContentResolver().query(MOD_CONTENT_URI, null, null, null, null);
+		cursor.moveToFirst();
+		long[][] modArray = new long[cursor.getCount()][3];
+		for(int i=0;i<cursor.getCount();i++){
+			modArray[i][0] = cursor.getLong(0);
+			modArray[i][MOD_ARRAY_LUID] = cursor.getLong(1);
+			modArray[i][MOD_ARRAY_MODIFIED_DATE] = cursor.getLong(2);
+			cursor.moveToNext();
+		}
+		cursor.close();
+		return modArray;
+	}
+
+
+	private long[][] getNotesArray() {
+		
+		String[] PROJECTION = new String[] {
+	        NotePad.Notes._ID, // 0
+	        NotePad.Notes.CREATED_DATE,
+	        NotePad.Notes.MODIFIED_DATE,
+	    };
+		
+		Cursor cursor = activity.getContentResolver().query(NOTE_CONTENT_URI, PROJECTION, null, null, null);
+		cursor.moveToFirst();
+		long[][] noteArray = new long[cursor.getCount()][3];
+		for(int i=0;i<cursor.getCount();i++) {
+			
+			noteArray[i][NOTE_ARRAY_LOCAL_ID] = cursor.getLong(0);
+			noteArray[i][NOTE_ARRAY_CREATED_DATE] = cursor.getLong(1);
+			noteArray[i][NOTE_ARRAY_MODIFIED_DATE] = cursor.getLong(2);
+			cursor.moveToNext();
+		}
+		cursor.close();
+		return noteArray;
+	}
+
+}

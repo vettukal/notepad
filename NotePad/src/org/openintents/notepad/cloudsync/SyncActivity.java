@@ -19,8 +19,10 @@ public class SyncActivity extends Activity{
 		
 		TextView syncText = (TextView) findViewById(R.id.sync_textview);
 		
-		AsyncChangedNotes asn = new AsyncChangedNotes(this);
-		asn.execute();
+		AsyncDetectChange adc = new AsyncDetectChange(this);
+		adc.execute();
+		//AsyncChangedNotes asn = new AsyncChangedNotes(this);
+		//asn.execute();
 		
 	}
 	@Override
