@@ -6,6 +6,7 @@ import org.json.JSONObject;
 import org.openintents.notepad.NotePad;
 import org.openintents.notepad.NotePadProvider;
 import org.openintents.notepad.NotePad.Notes;
+import org.openintents.notepad.cloudsync.util.Dumper;
 
 import android.content.ContentValues;
 import android.database.Cursor;
@@ -283,6 +284,7 @@ public class AsyncApplyResult extends AsyncTask<String[], Void, String>{
 	@Override
 	protected void onPostExecute(String result) {
 		
+		Dumper.updateModTable(activity);
 		activity.syncComplete();
 		super.onPostExecute(result);
 	}

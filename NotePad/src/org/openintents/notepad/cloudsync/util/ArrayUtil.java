@@ -4,7 +4,7 @@ import org.openintents.notepad.cloudsync.AsyncDetectChange;
 
 public class ArrayUtil {
 
-	private static final long MILLI_SEC_FACTOR = (long) Math.pow(10, 13);
+	private static final long MILLI_SEC_FACTOR = (long) Math.pow(10, 14);
 
 	public static long[] getSingleDimenArray(long[][] array,
 			int returnColumnIndex) {
@@ -21,7 +21,7 @@ public class ArrayUtil {
 		//1.324512×10¹²
 		long[] localId = new long[LUIDArray.length];
 		for (int i = 0; i < LUIDArray.length; i++) {
-			localId[i] = LUIDArray[i]%MILLI_SEC_FACTOR;
+			localId[i] = getLocalIdFromLUID(LUIDArray[i]);
 		}
 		return localId;
 	}
@@ -31,7 +31,7 @@ public class ArrayUtil {
 		long[] noteLUIDArray = new long[noteArray.length];
 		
 		for (int i = 0; i < noteArray.length; i++) {
-			noteLUIDArray[i] = noteArray[i][AsyncDetectChange.NOTE_ARRAY_CREATED_DATE]
+			noteLUIDArray[i] = noteArray[i][AsyncDetectChange.NOTE_ARRAY_LOCAL_ID]
 					* MILLI_SEC_FACTOR
 					+ noteArray[i][AsyncDetectChange.NOTE_ARRAY_CREATED_DATE];
 			
@@ -47,7 +47,12 @@ public class ArrayUtil {
 
 	public static long getLocalIdFromLUID(long LUID) {
 		// TODO Auto-generated method stub
-		return LUID%MILLI_SEC_FACTOR;
+		return (LUID-LUID%MILLI_SEC_FACTOR)/MILLI_SEC_FACTOR;
+	}
+
+	public static long getLUID(long localId, long createdDate) {
+		
+		return localId*MILLI_SEC_FACTOR+createdDate;
 	}
 	
 	

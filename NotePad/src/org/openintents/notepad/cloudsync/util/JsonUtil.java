@@ -25,6 +25,7 @@ public class JsonUtil {
 		String selection_end=cursor.getString(9);
 		String scroll_position=cursor.getString(10);
 		
+		long LUID = ArrayUtil.getLUID(cursor.getLong(0), cursor.getLong(3));
 		String jsonNoteString= " { \"id\": \" "+id+" \" , \"jsonString\": { \"title\": \" "+title+" \", \"note\": \" "+note+" \", \"created_date\": \" "+created_date+" \", \"modified_date\": \" "+modified_date+" \", \"tags\": \" "+tags+" \", \"encrypted\": \" "+encrypted+" \", \"theme\": \" "+theme+" \", \"selection_start\": \" "+selection_start+" \", \"selection_end\": \" "+selection_end+" \",\"scroll_position\": \" "+scroll_position+" \" } }  ";
 		jsonBuilder.append(jsonNoteString) ;
 		jsonBuilder.append(",");

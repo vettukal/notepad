@@ -5,8 +5,10 @@ import java.util.Arrays;
 
 import org.openintents.notepad.NotePad;
 import org.openintents.notepad.cloudsync.util.ArrayUtil;
+import org.openintents.notepad.cloudsync.util.Dumper;
 import org.openintents.notepad.cloudsync.util.JsonUtil;
 
+import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -21,7 +23,7 @@ public class AsyncDetectChange extends AsyncTask<Void, Void, String[]>{
 	public static final int MOD_ARRAY_LUID = 1;
 	public static final int MOD_ARRAY_MODIFIED_DATE = 2;
 	
-	static final String PACKAGE_NAME = "org.openintents.notepad";
+	public static final String PACKAGE_NAME = "org.openintents.notepad";
 	private long[][] noteArray;
 	private long[][] modArray;
 	
@@ -51,6 +53,9 @@ public class AsyncDetectChange extends AsyncTask<Void, Void, String[]>{
 		noteArray = getNotesArray();
 		modArray = getModArray();
 		
+		
+		Dumper.dump("[modArray]", ArrayUtil.getSingleDimenArray(modArray, MOD_ARRAY_LUID));
+		Dumper.dump("[NoteArray01]", ArrayUtil.getSingleDimenArray(noteArray,NOTE_ARRAY_LOCAL_ID ));
 		if(hasResetHappened()) {
 			deleteOISyncData(PACKAGE_NAME);
 		}
@@ -66,6 +71,9 @@ public class AsyncDetectChange extends AsyncTask<Void, Void, String[]>{
 		
 		Ulg.d(packJson());
 		Ulg.d(packDelJson());
+		//Dumper.updateModTable(activity); // This is should be done after the Result back from the server 
+		// is applied to OI Note. Here for only testing purposes.
+		
 		return new String[]{packJson(),packDelJson()};
 	}
 
@@ -161,6 +169,7 @@ public class AsyncDetectChange extends AsyncTask<Void, Void, String[]>{
 				}
 			}
 		}
+		Ulg.d(modifiedIdList.toString());
 		return modifiedIdList;
 	}
 	
@@ -178,7 +187,8 @@ public class AsyncDetectChange extends AsyncTask<Void, Void, String[]>{
 		
 		long[] noteLocalIdArray = ArrayUtil.getSingleDimenArray(noteArray, NOTE_ARRAY_LOCAL_ID);
 		long[] modLocalIdArray = ArrayUtil.getModLocalIdArray(modArray);
-		
+		Dumper.dump("modLocalIdArray",modLocalIdArray);
+		Dumper.dump("noteLocalIdArray", noteLocalIdArray);
 		Arrays.sort(noteLocalIdArray);
 		Arrays.sort(modLocalIdArray);
 		
@@ -193,8 +203,36 @@ public class AsyncDetectChange extends AsyncTask<Void, Void, String[]>{
 	}
 
 	private void deleteOISyncData(String packageName) {
-		// TODO Auto-generated method stub
+		// Make only OI Note to be deleted.
 		if (debug) Log.d(TAG,"Going to delete all OI Sync Data with this pckName:-> "+packageName);
+		String AUTHORITY = "org.openintents.cloudsync.contentprovider";
+		
+		String IDMAPS_BASE_PATH = "idmaps";
+		 
+		Uri IDMAPS_CONTENT_URI = Uri.parse("content://" + AUTHORITY
+				+ "/" + IDMAPS_BASE_PATH);
+			
+		 
+		String MODIFY_BASE_PATH = "modifys";
+		 
+		Uri MODIFY_CONTENT_URI = Uri.parse("content://" + AUTHORITY
+				+ "/" + MODIFY_BASE_PATH);
+		
+		 
+		String TIME_BASE_PATH = "times";
+		 
+		Uri TIME_CONTENT_URI = Uri.parse("content://" + AUTHORITY
+				+ "/" + TIME_BASE_PATH);
+		
+		Uri timeDel = Uri.parse(TIME_CONTENT_URI.toString());
+		Uri modDel = Uri.parse(MODIFY_CONTENT_URI.toString());
+		Uri idDel = Uri.parse(IDMAPS_CONTENT_URI.toString());
+		
+		int timeDelret = activity.getContentResolver().delete(timeDel,null, null);
+		int modret = activity.getContentResolver().delete(modDel, null, null);
+		int idret = activity.getContentResolver().delete(idDel, null, null);
+		
+		if (debug) Log.d("vincent", "returned vals "+timeDelret+" "+modret+" "+idret);
 		
 	}
 	
@@ -214,8 +252,10 @@ public class AsyncDetectChange extends AsyncTask<Void, Void, String[]>{
 		
 		Arrays.sort(LUIDArray);
 		Arrays.sort(noteLUIDArray);
-		
-		if(LUIDArray.length == 0) { return false; }
+		Dumper.dump("[LUiDArray]",LUIDArray );
+		Dumper.dump("[noteLuidArr]", noteLUIDArray);
+		if(LUIDArray.length == 0) { return false; } // This is because mod table is empty.
+		if(noteLUIDArray.length == 0) { return true; } // The oi NOte is empty there is nothing in it.
 		for (long modLocalId : LUIDArray) {
 			if(Arrays.binarySearch(noteLUIDArray, modLocalId) > -1) {
 				return false;
@@ -262,6 +302,25 @@ public class AsyncDetectChange extends AsyncTask<Void, Void, String[]>{
 		}
 		cursor.close();
 		return noteArray;
+	}
+	
+	@Override
+	protected void onPostExecute(String[] result) {
+		Ulg.d("[ChngNote] inside postexcute of ChngNote");
+		
+		if (debug) Log.d(TAG, "inside post execute");
+		// checked for the case when there is no modification....
+		String jsonString = result[0];
+		String jsonDeleteString = result[1];
+		if(SyncAdapter.isIntentAvailable(activity, "vincent.start")) {
+			Intent syncIntent = new Intent("vincent.start");
+			syncIntent.putExtra("data", jsonString);
+			if (debug) Log.d(TAG,"changed notes delete:-> "+jsonDeleteString);
+			syncIntent.putExtra("delete", jsonDeleteString);
+			syncIntent.putExtra("package", activity.getPackageName());
+			activity.startActivityForResult(syncIntent, SyncActivity.SYNC_REQUEST_CODE);
+		}
+		super.onPostExecute(result);
 	}
 
 }
